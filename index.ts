@@ -66,10 +66,7 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
   res.status(200).send(`
 <html>
   <body>
-    <form id="f" action="https://login.growtopiagame.com/player/validate/close" method="GET">
-      <input type="hidden" name="_token" value="${encodedClientData}">
-    </form>
-    <script>document.getElementById('f').submit()</script>
+    <input name="_token" type="hidden" value="${encodedClientData}">
   </body>
 </html>
 `);
