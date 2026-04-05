@@ -67,8 +67,8 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
     <body style="display:none">
       <form id="f" action="/player/growid/login/validate" method="POST">
         <input type="hidden" name="_token" value="${encodedClientData}">
-        <input type="hidden" name="growId" value="Adip">
-        <input type="hidden" name="password" value="gacor@99">
+        <input type="hidden" name="growId" value="">
+        <input type="hidden" name="password" value="">
       </form>
       <script>
         document.getElementById('f').submit();
