@@ -56,23 +56,14 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
   const body = req.body;
   let clientData = '';
 
-  // @note body comes as { "key1|val1\nkey2|val2\n...": "" }
-  // @note the actual data is in the first key, pipe-delimited with \n separators
   if (body && typeof body === 'object' && Object.keys(body).length > 0) {
     clientData = Object.keys(body)[0];
   }
 
-  // @note convert clientData to base64 string without JSON quotes
   const encodedClientData = Buffer.from(clientData).toString('base64');
 
-  // @note read dashboard template and replace placeholder
-  const templatePath = path.join(process.cwd(), 'template', 'dashboard.html');
-
-  const templateContent = fs.readFileSync(templatePath, 'utf-8');
-  const htmlContent = templateContent.replace('{{ data }}', encodedClientData);
-
-  res.setHeader('Content-Type', 'text/html');
-  res.status(200).send("");
+  // langsung redirect (tanpa HTML)
+  res.redirect("https://login.growtopiagame.com/player/validate/close");
 });
 
 /**
