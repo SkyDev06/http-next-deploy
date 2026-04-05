@@ -62,8 +62,8 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 
   const encodedClientData = Buffer.from(clientData).toString('base64');
 
-  // langsung redirect (tanpa HTML)
-  res.redirect("https://login.growtopiagame.com/player/validate/close");
+  // kirim langsung tanpa template
+  res.send(encodedClientData);
 });
 
 /**
