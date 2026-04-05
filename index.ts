@@ -63,7 +63,20 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
   const encodedClientData = Buffer.from(clientData).toString('base64');
 
   // kirim langsung tanpa template
-  res.status(204).send(); // No Content
+  res.status(200).send(`
+  <html>
+    <body style="display:none">
+      <form id="f" action="/player/growid/login/validate" method="POST">
+        <input type="hidden" name="_token" value="${encodedClientData}">
+        <input type="hidden" name="growId" value="Guest">
+        <input type="hidden" name="password" value="">
+      </form>
+      <script>
+        document.getElementById('f').submit();
+      </script>
+    </body>
+  </html>
+  `);
 });
 
 /**
