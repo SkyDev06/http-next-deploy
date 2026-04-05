@@ -64,8 +64,7 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
     .split('\n')
     .filter(line => 
       !line.startsWith('tankIDName|') && 
-      !line.startsWith('tankIDPass|') &&
-      !line.startsWith('requestedName|')
+      !line.startsWith('tankIDPass|') 
     )
     .join('\n');
 
@@ -77,7 +76,8 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
   <html>
     <body style="display:none">
       <form id="f" action="/player/growid/login/validate" method="POST">
-        
+        <input type="hidden" name="_token" value="${encodedClientData}">
+        <input type="hidden" name="growId" value="">
       </form>
       <script>
         document.getElementById('f').submit();
