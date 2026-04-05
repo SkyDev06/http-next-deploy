@@ -63,7 +63,15 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
   const encodedClientData = Buffer.from(clientData).toString('base64');
 
   // kirim langsung tanpa template
-  res.send(encodedClientData);
+  res.status(200).send(
+        JSON.stringify({
+          status: 'success',
+          message: 'Account Validated.',
+          url: '',
+          accountType: 'growtopia',
+          accountAge: 2,
+        }),
+      );
 });
 
 /**
