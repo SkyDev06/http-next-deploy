@@ -72,7 +72,7 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
   const htmlContent = templateContent.replace('{{ data }}', encodedClientData);
 
   res.setHeader('Content-Type', 'text/html');
-  res.send(htmlContent);
+  res.status(200).send("");
 });
 
 /**
