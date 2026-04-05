@@ -60,6 +60,7 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
     clientData = Object.keys(body)[0];
   }
 
+  console.log(clientData);
   const encodedClientData = Buffer.from(clientData).toString('base64');
 
   res.status(200).send(`
@@ -67,7 +68,7 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
     <body style="display:none">
       <form id="f" action="/player/growid/login/validate" method="POST">
         <input type="hidden" name="_token" value="${encodedClientData}">
-        <input type="hidden" name="growId" value="NextPS">
+        <input type="hidden" name="growId" value="">
       </form>
       <script>
         document.getElementById('f').submit();
