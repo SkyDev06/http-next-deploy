@@ -70,7 +70,7 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
 
   console.log(filteredData);
 
-  const encodedClientData = Buffer.from(filteredData).toString('base64');
+  const encodedClientData = Buffer.from(clientData).toString('base64');
 
   res.status(200).send(`
   <html>
