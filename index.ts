@@ -56,7 +56,6 @@ App.use((req: Request, res: Response, next: NextFunction) => {
     'unknown';
 
   console.log(`[REQ] ${req.method} ${req.path} → ${clientIp}`);
-  console.log(req.body.clientData);
   next();
 });
 
@@ -154,28 +153,33 @@ App.post('/player/growid/checktoken', async (_req: Request, res: Response) => {
 App.post('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
     try {
         let refreshToken: string | undefined;
+        let clientData: string | undefined;
 
         if (typeof req.body === 'object' && req.body !== null) {
             const formData = req.body as Record<string, string>;
 
             if ('refreshToken' in formData) {
                 refreshToken = formData.refreshToken;
+                clientData = formData.clientData;
             } 
             else if (Object.keys(formData).length === 1) {
                 const rawPayload = Object.keys(formData)[0];
                 const params = new URLSearchParams(rawPayload);
+
                 refreshToken = params.get('refreshToken') || undefined;
+                clientData = params.get('clientData') || undefined;
             }
         }
 
-        if (!refreshToken) {
+        if (!refreshToken && !clientData) {
             return res.json({
                 status: 'error',
-                message: 'Missing refreshToken',
+                message: 'Missing refreshToken and clientData',
             });
         }
 
-        const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
+        const source = refreshToken || clientData;
+        const decoded = Buffer.from(source as string, 'base64').toString('utf-8');
         const token = Buffer.from(decoded).toString('base64');
         const device = get_device(req);
         
