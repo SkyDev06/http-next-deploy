@@ -27,13 +27,13 @@ function get_device(req: Request) {
     const user_agent = (req.headers['user-agent'] || '').toLowerCase();
     
     switch (true) {
-        case /iphone|ipad|ios/.test(user_agent):
+        case /iphone|ipad|ios/i.test(user_agent):
         return eDeviceManager.DEVICE_IOS;
 
-        case /android/.test(user_agent):
+        case /android/i.test(user_agent):
         return eDeviceManager.DEVICE_ANDROID;
 
-        case /mac/.test(user_agent) && !/iphone|ipad|ios/.test(user_agent):
+        case /mac/i.test(user_agent) && !/iphone|ipad|ios/i.test(user_agent):
         return eDeviceManager.DEVICE_MACOS;
 
         default:
@@ -55,16 +55,18 @@ App.use((req: Request, res: Response, next: NextFunction) => {
         req.socket.remoteAddress ||
         'unknown';
 
-    const userAgent = req.headers['user-agent'] || '';
-    const isIOS = /iphone|ipad|ios/i.test(userAgent);
+    const device = get_device(req);
 
     console.log(`[REQ] ${req.method} ${req.path} → ${clientIp}`);
 
-    if (isIOS) {
-        console.log("[IOS]: " + req.body)
-    }
-    else {
-        console.log("[NORMAL]: " + req.body)
+    switch (device) {
+        case eDeviceManager.DEVICE_IOS:
+            console.log("[IOS]: " + req.body)
+            break;
+            
+        default:
+            console.log("[NORMAL]: " + req.body)
+            break;
     }
     next();
 });
