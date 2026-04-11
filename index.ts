@@ -34,6 +34,7 @@ App.set('trust proxy', 1);
 App.disable('x-powered-by');
 App.use(express.json());
 App.use(express.urlencoded({ extended: true }));
+App.use(express.text({ type: "*/*" }));
 
 App.use((req: Request, res: Response, next: NextFunction) => {
     const clientIp =
@@ -43,47 +44,21 @@ App.use((req: Request, res: Response, next: NextFunction) => {
 
     const device = get_device(req);
 
-    console.log(`\n[REQ] ${req.method} ${req.path} → ${clientIp}`);
-
-    // 🔥 DEBUG FULL REQUEST (KHUSUS iOS)
-    if (device === eDeviceManager.DEVICE_IOS) {
-        console.log("=== IOS DEBUG START ===");
-        console.log("HEADERS:", req.headers);
-        console.log("BODY TYPE:", typeof req.body);
-        console.log("BODY:", req.body);
-        console.log("QUERY:", req.query);
-        console.log("=== IOS DEBUG END ===");
-    }
+    console.log(`[REQ] ${req.method} ${req.path} → ${clientIp}`);
 
     let clientData = '';
-
-    // handle string (iOS raw)
-    if (typeof req.body === 'string') {
-        clientData = req.body;
+    if (req.body && typeof req.body === 'object') {
+        clientData = Object.keys(req.body)[0] || '';
     }
 
-    // handle object
-    else if (req.body && typeof req.body === 'object') {
-        const keys = Object.keys(req.body);
-
-        if (keys.length === 1 && keys[0].includes('|')) {
-            clientData = keys[0];
-        } else if (req.body.refreshToken) {
-            clientData = req.body.refreshToken;
-        } else if (req.body.clientData) {
-            clientData = req.body.clientData;
-        } else {
-            clientData = JSON.stringify(req.body);
-        }
+    switch (device) {
+        case eDeviceManager.DEVICE_IOS:
+            console.log("[IOS]: " + clientData);
+            break;
+        default:
+            console.log("[NORMAL]: " + clientData);
+            break;
     }
-
-    if (!clientData) {
-        clientData = '[EMPTY BODY]';
-    }
-
-    console.log(
-        `[${device === eDeviceManager.DEVICE_IOS ? "IOS" : "NORMAL"}]: ${clientData}`
-    );
 
     next();
 });
@@ -171,50 +146,63 @@ App.post('/player/growid/checktoken', async (_req: Request, res: Response) => {
     return res.redirect(307, '/player/growid/validate/checktoken');
 });
 
-App.post('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
+App.all('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
     try {
-        let refreshToken = req.body.refreshToken;
-        let clientData = req.body.clientData;
+        let refreshToken: string | undefined;
 
-        if (!refreshToken && !clientData) {
+        if (typeof req.body === 'string') {
+            const params = new URLSearchParams(req.body);
+            refreshToken = params.get('refreshToken') || undefined;
+        }
+
+        else if (typeof req.body === 'object' && req.body !== null) {
+            const formData = req.body as Record<string, string>;
+
+            if ('refreshToken' in formData) {
+                refreshToken = formData.refreshToken;
+            } 
+            else if (Object.keys(formData).length === 1) {
+                const rawPayload = Object.keys(formData)[0];
+                const params = new URLSearchParams(rawPayload);
+                refreshToken = params.get('refreshToken') || undefined;
+            }
+        }
+
+        if (!refreshToken && req.query.refreshToken) {
+            refreshToken = String(req.query.refreshToken);
+        }
+
+        if (!refreshToken) {
             return res.json({
                 status: 'error',
-                message: 'Missing refreshToken and clientData',
+                message: 'Missing refreshToken',
             });
         }
 
-        const decoded = Buffer.from(refreshToken || clientData, 'base64').toString('utf-8');
+        const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
         const token = Buffer.from(decoded).toString('base64');
+
         const device = get_device(req);
-        
-        switch (device) {
-            case eDeviceManager.DEVICE_IOS:
-                res.setHeader('Content-Type', 'application/json');
-                return res.json({
-                    status: 'success',
-                    message: 'Account Validated.',
-                    token,
-                    url: '',
-                    accountType: 'growtopia',
-                    accountAge: 2,
-                });
-                break;
-            
-            default:
-                res.send(JSON.stringify({
-                    status: 'success',
-                    message: 'Account Validated.',
-                    token,
-                    url: '',
-                    accountType: 'growtopia',
-                    accountAge: 2,
-                }));
-                break;
+
+        const response = {
+            status: 'success',
+            message: 'Account Validated.',
+            token,
+            url: '',
+            accountType: 'growtopia',
+            accountAge: 2,
+        };
+
+        if (device === eDeviceManager.DEVICE_IOS) {
+            res.setHeader('Content-Type', 'application/json');
+            return res.json(response);
         }
+
+        return res.send(JSON.stringify(response));
     }
     catch (error) {
         console.log(`[ERROR]: ${error}`);
-        res.json({
+        return res.json({
             status: 'error',
             message: 'Internal Server Error',
         });
