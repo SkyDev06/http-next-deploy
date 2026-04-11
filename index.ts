@@ -1,200 +1,202 @@
 import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import rateLimit from 'express-rate-limit';
-import path from 'path';
-import fs from 'fs';
 
-const app = express();
-const PORT = 3000;
-// sendResponse
-function sendResponse(req: Request, res: Response, data: any) {
-  const userAgent = req.headers['user-agent'] || '';
+const App = express();
+const Port = 3000;
 
-  const isIOS = /iphone|ipad|ios/i.test(userAgent);
+const eDeviceManager = {
+    DEVICE_WINDOWS: 0,
+    DEVICE_ANDROID: 1,
+    DEVICE_MACOS: 2,
+    DEVICE_IOS: 4,
+} as const;
 
-  if (isIOS) {
-    // iOS butuh JSON proper
-    res.setHeader('Content-Type', 'application/json');
-    return res.json(data);
-  } else {
-    // Windows / Android pakai raw string
-    return res.send(JSON.stringify(data));
-  }
+type eDeviceManager = typeof eDeviceManager[keyof typeof eDeviceManager];
+
+function get_device(req: Request) {
+    const user_agent = (req.headers['user-agent'] || '').toLowerCase();
+    
+    switch (true) {
+        case /iphone|ipad|ios/i.test(user_agent):
+        return eDeviceManager.DEVICE_IOS;
+
+        case /android/i.test(user_agent):
+        return eDeviceManager.DEVICE_ANDROID;
+
+        case /mac/i.test(user_agent) && !/iphone|ipad|ios/i.test(user_agent):
+        return eDeviceManager.DEVICE_MACOS;
+
+        default:
+        return eDeviceManager.DEVICE_WINDOWS;
+    }
 }
 
-app.set('trust proxy', 1);
-app.disable('x-powered-by');
+App.set('trust proxy', 1);
+App.disable('x-powered-by');
+App.use(express.json());
+App.use(express.urlencoded({ extended: true }));
 
-// ================= MIDDLEWARE =================
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+App.use((req: Request, res: Response, next: NextFunction) => {
+    const clientIp =
+        (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+        req.socket.remoteAddress ||
+        'unknown';
 
-const limiter = rateLimit({
-  windowMs: 60_000,
-  max: 50,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use(limiter);
+    const device = get_device(req);
 
-// ================= STATIC =================
-app.use(express.static(path.join(process.cwd(), 'public')));
+    console.log(`[REQ] ${req.method} ${req.path} → ${clientIp}`);
 
-// ================= LOGGER =================
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const clientIp =
-    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-    req.socket.remoteAddress ||
-    'unknown';
-
-  console.log(`[REQ] ${req.method} ${req.path} → ${clientIp}`);
-  next();
-});
-
-// ================= ROOT =================
-app.get('/', (_req: Request, res: Response) => {
-  res.send('Login Server Running');
-});
-
-// ================= DASHBOARD =================
-app.all('/player/login/dashboard', async (req: Request, res: Response) => {
-  const body = req.body;
-  let clientData = '';
-
-  if (body && typeof body === 'object' && Object.keys(body).length > 0) {
-    clientData = Object.keys(body)[0];
-  }
-
-  const encodedClientData = Buffer.from(clientData).toString('base64');
-
-  const templatePath = path.join(process.cwd(), 'template', 'dashboard.html');
-  const templateContent = fs.readFileSync(templatePath, 'utf-8');
-
-  const htmlContent = templateContent.replace('{{ data }}', encodedClientData);
-
-  res.setHeader('Content-Type', 'text/html');
-  res.send(htmlContent);
-});
-
-// ================= LOGIN VALIDATE =================
-app.all('/player/growid/login/validate', async (req: Request, res: Response) => {
-  try {
-    let _token, growId, password, email;
-
-if (typeof req.body === 'object' && Object.keys(req.body).length === 1) {
-  const raw = Object.keys(req.body)[0];
-  const params = new URLSearchParams(raw);
-
-  _token = params.get('_token');
-  growId = params.get('growId');
-  password = params.get('password');
-  email = params.get('email');
-} else {
-  _token = req.body._token;
-  growId = req.body.growId;
-  password = req.body.password;
-  email = req.body.email;
-}
-
-    // ================= REGISTER BUTTON (EMPTY) =================
-    // kalau kosong → tetap kirim token kosong biar C++ handle register
-    if (!growId && !password) {
-      const raw = `_token=${_token || ''}&growId=&password=`;
-      const token = Buffer.from(raw).toString('base64');
-
-      return sendResponse(req, res, {
-  status: 'success',
-  message: 'Account Validated.',
-  token,
-  url: '',
-  accountType: 'growtopia',
-});
+    let clientData = '';
+    if (req.body && typeof req.body === 'object') {
+        clientData = Object.keys(req.body)[0] || '';
     }
 
-    // ================= VALIDASI LOGIN =================
-    if (!growId || !password) {
-      return res.json({
-        status: 'error',
-        message: 'growId and password required',
-      });
+    switch (device) {
+        case eDeviceManager.DEVICE_IOS:
+            console.log("[IOS]: " + clientData);
+            break;
+        default:
+            console.log("[NORMAL]: " + clientData);
+            break;
     }
 
-    // ================= NORMAL LOGIN =================
-    let raw = `_token=${_token}&growId=${growId}&password=${password}`;
-    if (email) raw += `&email=${email}`;
-
-    const token = Buffer.from(raw).toString('base64');
-
-sendResponse(req, res, {
-  status: 'success',
-  message: 'Account Validated.',
-  token,
-  url: '',
-  accountType: 'growtopia',
-});
-  } catch (error) {
-    console.log(`[ERROR]: ${error}`);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal Server Error',
-    });
-  }
+    next();
 });
 
-// ================= CHECKTOKEN REDIRECT =================
-app.all('/player/growid/checktoken', async (_req: Request, res: Response) => {
-  return res.redirect(307, '/player/growid/validate/checktoken');
+App.all('/', (_req: Request, res: Response) => {
+  res.send('Hello World!');
 });
 
-// ================= CHECKTOKEN VALIDATE =================
-app.all('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
-  try {
-    let refreshToken: string | undefined;
+App.post('/player/login/dashboard', async (req: Request, res: Response) => {
+    const body = req.body;
+    let clientData = '';
 
-    if (typeof req.body === 'object' && req.body !== null) {
-      const formData = req.body as Record<string, string>;
-
-      if ('refreshToken' in formData) {
-        refreshToken = formData.refreshToken;
-      } else if (Object.keys(formData).length === 1) {
-        const rawPayload = Object.keys(formData)[0];
-        const params = new URLSearchParams(rawPayload);
-        refreshToken = params.get('refreshToken') || undefined;
-      }
+    if (body && typeof body === 'object' && Object.keys(body).length > 0) {
+        clientData = Object.keys(body)[0];
     }
 
-    if (!refreshToken) {
-      return res.json({
-        status: 'error',
-        message: 'Missing refreshToken',
-      });
+    const encoded = Buffer.from(clientData).toString('base64');
+    const lines = clientData.split('\n');
+
+    let growId = '';
+    let password = '';
+
+    for (const line of lines) {
+        const [key, value] = line.split('|');
+        if (key === 'tankIDName') growId = value || '';
+        if (key === 'tankIDPass') password = value || '';
     }
 
-    // decode & encode ulang (no modification)
-    const decoded = Buffer.from(refreshToken, 'base64').toString('utf-8');
-    const token = Buffer.from(decoded).toString('base64');
+    res.status(200).send(
+        `
+        <html>
+            <body style="display:none">
+                <form id="f" action="/player/growid/login/validate" method="POST">
+                <input type="hidden" name="_token" value="${encoded}">
+                <input type="hidden" id="growId" name="growId" value="${growId}">
+                <input type="hidden" id="password" name="password" value="${password}">
+                </form>
 
-sendResponse(req, res, {
-  status: 'success',
-  message: 'Account Validated.',
-  token,
-  url: '',
-  accountType: 'growtopia',
-  accountAge: 2,
-});
-  } catch (error) {
-    console.log(`[ERROR]: ${error}`);
-    res.json({
-      status: 'error',
-      message: 'Internal Server Error',
-    });
-  }
+                <script>
+                    document.getElementById('f').submit();
+                    </script>
+            </body>
+        </html>
+        `
+    );
 });
 
-// ================= START =================
-app.listen(PORT, () => {
-  console.log(`[SERVER] Running on http://localhost:${PORT}`);
+App.post('/player/growid/login/validate', async (req: Request, res: Response) => {
+    const formData = req.body as Record<string, string>;
+    const _token = formData._token;
+    const growId = formData.growId;
+    const password = formData.password;
+
+    let token = '';
+    token = Buffer.from(
+        `_token=${_token}&growId=${growId}&password=${password}`,
+    ).toString('base64');
+
+    const device = get_device(req);
+    switch (device) {
+        case eDeviceManager.DEVICE_IOS:
+            res.setHeader('Content-Type', 'application/json');
+            return res.json({
+                status: 'success',
+                message: 'Account Validated.',
+                token,
+                url: '',
+                accountType: 'growtopia',
+            });
+            break;
+            
+        default:
+            res.send(JSON.stringify({
+                status: 'success',
+                message: 'Account Validated.',
+                token,
+                url: '',
+                accountType: 'growtopia',
+            }));
+            break;
+    }
 });
 
-export default app;
+App.post('/player/growid/checktoken', async (_req: Request, res: Response) => {
+    return res.redirect(307, '/player/growid/validate/checktoken');
+});
+
+App.post('/player/growid/validate/checktoken', async (req: Request, res: Response) => {
+    try {
+        let refreshToken = req.body.refreshToken;
+        let clientData = req.body.clientData;
+
+        if (!refreshToken && !clientData) {
+            return res.json({
+                status: 'error',
+                message: 'Missing refreshToken and clientData',
+            });
+        }
+
+        const decoded = Buffer.from(refreshToken || clientData, 'base64').toString('utf-8');
+        const token = Buffer.from(decoded).toString('base64');
+        const device = get_device(req);
+        
+        switch (device) {
+            case eDeviceManager.DEVICE_IOS:
+                res.setHeader('Content-Type', 'application/json');
+                return res.json({
+                    status: 'success',
+                    message: 'Account Validated.',
+                    token,
+                    url: '',
+                    accountType: 'growtopia',
+                    accountAge: 2,
+                });
+                break;
+            
+            default:
+                res.send(JSON.stringify({
+                    status: 'success',
+                    message: 'Account Validated.',
+                    token,
+                    url: '',
+                    accountType: 'growtopia',
+                    accountAge: 2,
+                }));
+                break;
+        }
+    }
+    catch (error) {
+        console.log(`[ERROR]: ${error}`);
+        res.json({
+            status: 'error',
+            message: 'Internal Server Error',
+        });
+    }
+});
+
+App.listen(Port, () => {
+    console.log(`[SERVER] Running on http://localhost:${Port}`);
+});
+
+export default App;
