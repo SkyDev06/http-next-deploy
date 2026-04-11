@@ -1,18 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import rate_limit from 'express-rate-limit';
-import path from 'path';
-import fs from 'fs';
 
 const App = express();
 const Port = 3000;
-
-const Limiter = rate_limit({
-  windowMs: 60_000,
-  max: 50,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 const eDeviceManager = {
     DEVICE_WINDOWS: 0,
@@ -45,9 +34,6 @@ App.set('trust proxy', 1);
 App.disable('x-powered-by');
 App.use(express.json());
 App.use(express.urlencoded({ extended: true }));
-App.use(cors());
-App.use(Limiter);
-App.use(express.static(path.join(process.cwd(), 'public')));
 
 App.use((req: Request, res: Response, next: NextFunction) => {
     const clientIp =
@@ -119,19 +105,11 @@ App.post('/player/growid/login/validate', async (req: Request, res: Response) =>
     const _token = formData._token;
     const growId = formData.growId;
     const password = formData.password;
-    const email = formData.email;
 
     let token = '';
-    if (email) {
-        token = Buffer.from(
-        `_token=${_token}&growId=${growId}&password=${password}&email=${email}&reg=1`,
-        ).toString('base64');
-    } 
-    else {
-        token = Buffer.from(
-        `_token=${_token}&growId=${growId}&password=${password}&reg=0`,
-        ).toString('base64');
-    }
+    token = Buffer.from(
+        `_token=${_token}&growId=${growId}&password=${password}`,
+    ).toString('base64');
 
     const device = get_device(req);
     switch (device) {
@@ -174,7 +152,6 @@ App.post('/player/growid/validate/checktoken', async (req: Request, res: Respons
             });
         }
 
-        const source = refreshToken || clientData;
         const decoded = Buffer.from(refreshToken || clientData, 'base64').toString('utf-8');
         const token = Buffer.from(decoded).toString('base64');
         const device = get_device(req);
