@@ -45,15 +45,20 @@ App.use((req: Request, res: Response, next: NextFunction) => {
 
     console.log(`[REQ] ${req.method} ${req.path} → ${clientIp}`);
 
+    let clientData = '';
+    if (req.body && typeof req.body === 'object') {
+        clientData = Object.keys(req.body)[0] || '';
+    }
+
     switch (device) {
         case eDeviceManager.DEVICE_IOS:
-            console.log("[IOS]: " + req.body)
+            console.log("[IOS]: " + clientData);
             break;
-            
         default:
-            console.log("[NORMAL]: " + req.body.clientData)
+            console.log("[NORMAL]: " + clientData);
             break;
     }
+
     next();
 });
 
