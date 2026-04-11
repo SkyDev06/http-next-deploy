@@ -176,11 +176,13 @@ App.all('/player/growid/validate/checktoken', async (req: Request, res: Response
     try {
         let refreshToken: string | undefined;
 
+        // 🔥 HANDLE STRING (iOS raw)
         if (typeof req.body === 'string') {
             const params = new URLSearchParams(req.body);
             refreshToken = params.get('refreshToken') || undefined;
         }
 
+        // 🔥 HANDLE OBJECT
         else if (typeof req.body === 'object' && req.body !== null) {
             const formData = req.body as Record<string, string>;
 
@@ -194,6 +196,7 @@ App.all('/player/growid/validate/checktoken', async (req: Request, res: Response
             }
         }
 
+        // 🔥 HANDLE QUERY (fallback iOS)
         if (!refreshToken && req.query.refreshToken) {
             refreshToken = String(req.query.refreshToken);
         }
