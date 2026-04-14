@@ -157,8 +157,7 @@ App.post('/player/growid/validate/checktoken', async (req: Request, res: Respons
             });
         }
 
-        const decoded = Buffer.from(clientData, 'base64').toString('utf-8');
-        const token = Buffer.from(decoded).toString('base64');
+        const token = Buffer.from(clientData).toString('base64');
         const device = get_device(req);
         
         switch (device) {
@@ -167,7 +166,7 @@ App.post('/player/growid/validate/checktoken', async (req: Request, res: Respons
                 return res.json({
                     status: 'success',
                     message: 'Account Validated.',
-                    clientData,
+                    token,
                     url: '',
                     accountType: 'growtopia',
                     accountAge: 2,
@@ -178,7 +177,7 @@ App.post('/player/growid/validate/checktoken', async (req: Request, res: Respons
                 res.send(JSON.stringify({
                     status: 'success',
                     message: 'Account Validated.',
-                    clientData,
+                    token,
                     url: '',
                     accountType: 'growtopia',
                     accountAge: 2,
