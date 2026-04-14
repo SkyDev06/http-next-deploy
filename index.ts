@@ -167,7 +167,7 @@ App.post('/player/growid/validate/checktoken', async (req: Request, res: Respons
                 return res.json({
                     status: 'success',
                     message: 'Account Validated.',
-                    token,
+                    clientData,
                     url: '',
                     accountType: 'growtopia',
                     accountAge: 2,
@@ -178,7 +178,7 @@ App.post('/player/growid/validate/checktoken', async (req: Request, res: Respons
                 res.send(JSON.stringify({
                     status: 'success',
                     message: 'Account Validated.',
-                    token,
+                    clientData,
                     url: '',
                     accountType: 'growtopia',
                     accountAge: 2,
