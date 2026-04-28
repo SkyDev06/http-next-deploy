@@ -34,6 +34,7 @@ App.set('trust proxy', 1);
 App.disable('x-powered-by');
 App.use(express.json());
 App.use(express.urlencoded({ extended: true }));
+App.use(express.text({ type: '*/*' }));
 
 App.use((req: Request, res: Response, next: NextFunction) => {
     const clientIp =
@@ -46,9 +47,12 @@ App.use((req: Request, res: Response, next: NextFunction) => {
     console.log(`[REQ] ${req.method} ${req.path} → ${clientIp}`);
 
     let clientData = '';
-    console.log(req.body);
-    if (req.body && typeof req.body === 'object') {
-        clientData = Object.keys(req.body)[0] || ''; 
+
+    if (typeof req.body === 'string') {
+        clientData = req.body;
+    }
+    else if (req.body && typeof req.body === 'object') {
+        clientData = Object.keys(req.body)[0] || '';
     }
 
     switch (device) {
@@ -71,7 +75,10 @@ App.post('/player/login/dashboard', async (req: Request, res: Response) => {
     const body = req.body;
     let clientData = '';
 
-    if (body && typeof body === 'object' && Object.keys(body).length > 0) {
+    if (typeof body === 'string') {
+        clientData = body;
+    }
+    else if (body && typeof body === 'object' && Object.keys(body).length > 0) {
         clientData = Object.keys(body)[0];
     }
 
